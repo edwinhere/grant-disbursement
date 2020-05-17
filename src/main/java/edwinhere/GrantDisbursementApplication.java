@@ -1,4 +1,4 @@
-package com.gmail.edwinhere.grantdisbursement;
+package edwinhere;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
