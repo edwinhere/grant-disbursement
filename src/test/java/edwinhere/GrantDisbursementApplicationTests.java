@@ -3,16 +3,14 @@ package edwinhere;
 import edwinhere.dto.HouseholdResponse;
 import edwinhere.dto.FamilyMemberResponse;
 import edwinhere.dto.FamilyMemberRequest;
-import edwinhere.type.HousingType;
 import edwinhere.type.MaritalStatus;
 import edwinhere.dto.HouseholdRequest;
 import edwinhere.type.OccupationType;
 import edwinhere.type.Gender;
 import com.github.javafaker.Faker;
-import java.util.Optional;
+import edwinhere.type.HousingType;
 import static org.assertj.core.api.Assertions.assertThat;
-import org.junit.jupiter.api.Order;
-import org.junit.jupiter.api.Test;
+import org.testng.annotations.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
@@ -21,10 +19,11 @@ import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.context.annotation.Bean;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.test.context.testng.AbstractTestNGSpringContextTests;
 import org.springframework.web.util.UriComponentsBuilder;
 
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
-class GrantDisbursementApplicationTests {
+class GrantDisbursementApplicationTests extends AbstractTestNGSpringContextTests {
 
 	@TestConfiguration
 	static class TestConfig {
@@ -44,13 +43,12 @@ class GrantDisbursementApplicationTests {
 	private ResponseEntity<HouseholdResponse> householdResponse;
 	private ResponseEntity<FamilyMemberResponse> familyMemberResponse;
 
-	@Test
+	@Test(groups = "1")
 	void contextLoads() {
 		assertThat(restTemplate).isNotNull();
 	}
 
-	@Test
-	@Order(1)
+	@Test(groups = "2", dependsOnGroups = "1")
 	void canCreateHousehold() {
 		HouseholdRequest request = new HouseholdRequest(HousingType.HDB);
 		ResponseEntity<HouseholdResponse> response = this.restTemplate
@@ -64,15 +62,14 @@ class GrantDisbursementApplicationTests {
 		this.householdResponse = response;
 	}
 
-	@Test
-	@Order(2)
+	@Test(groups = "3", dependsOnGroups = "2")
 	void canAddFamilyMemberToHousehold() {
 		assertThat(householdResponse).isNotNull();
 		FamilyMemberRequest request = new FamilyMemberRequest(
 						faker.name().fullName(),
 						Gender.MALE,
 						MaritalStatus.SINGLE,
-						Optional.empty(),
+						null,
 						OccupationType.Unemployed,
 						0,
 						faker.date().birthday()
@@ -89,13 +86,12 @@ class GrantDisbursementApplicationTests {
 
 		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
 		assertThat(response.getBody())
-						.isEqualToIgnoringGivenFields(request, "id");
+						.isEqualToIgnoringGivenFields(request, "id", "dob");
 
 		this.familyMemberResponse = response;
 	}
 
-	@Test
-	@Order(3)
+	@Test(groups = "4", dependsOnGroups = "3")
 	void canListHouseholds() {
 		assertThat(familyMemberResponse).isNotNull();
 		ResponseEntity<HouseholdResponse[]> response = this.restTemplate
@@ -104,13 +100,13 @@ class GrantDisbursementApplicationTests {
 										HouseholdResponse[].class
 						);
 		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-		assertThat(response.getBody()[0]).isEqualToComparingFieldByField(
-						this.familyMemberResponse.getBody()
-		);
+		assertThat(response.getBody()[0].getFamilyMembers()[0])
+						.isEqualToIgnoringGivenFields(
+										this.familyMemberResponse.getBody(), "dob"
+						);
 	}
 
-	@Test
-	@Order(4)
+	@Test(groups = "5", dependsOnGroups = "4")
 	void canShowHousehold() {
 		assertThat(householdResponse).isNotNull();
 		assertThat(familyMemberResponse).isNotNull();
@@ -126,6 +122,8 @@ class GrantDisbursementApplicationTests {
 		assertThat(response
 						.getBody()
 						.getFamilyMembers()[0]
-		).isEqualToComparingFieldByField(this.familyMemberResponse.getBody());
+		).isEqualToIgnoringGivenFields(
+						this.familyMemberResponse.getBody(), "dob"
+		);
 	}
 }
